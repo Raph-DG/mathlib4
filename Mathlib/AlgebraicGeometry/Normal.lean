@@ -55,6 +55,11 @@ class IsNormal (X : Scheme.{u}) where
   domain : ∀ x : X, IsDomain (X.presheaf.stalk x)
   integrallyClosed : ∀ x : X, IsIntegrallyClosed (X.presheaf.stalk x)
 
+open Ring in
+lemma Ring.dimensionLEOne_iff_krullDimLE_one {R : Type*} [CommRing R] [NoZeroDivisors R] :
+    DimensionLEOne R ↔ KrullDimLE 1 R :=
+  .trans ⟨fun h _ ↦ h.maximalOfPrime, fun h ↦ ⟨@h⟩⟩ krullDimLE_one_iff_of_noZeroDivisors.symm
+
 /--
 A normal, locally Noetherian scheme is regular in codimension one.
 -/
@@ -64,9 +69,10 @@ instance (X : Scheme.{u}) [IsLocallyNoetherian X] [l : IsNormal X] :
   dvr := by
     intro x hx
     dsimp
-    have a : ringKrullDim (X.presheaf.stalk x) = 1 :=
+    have a : ringKrullDim (X.presheaf.stalk x) = 1 := by
       /-
-      Proven in a branch, we can merge that guy in to get a proof.
+        exact IsDiscreteValuationRing.ringKrullDim_eq_one
+        from the DVR branch
       -/
       sorry
     have m : IsDedekindDomain (X.presheaf.stalk x) := by
@@ -76,6 +82,8 @@ instance (X : Scheme.{u}) [IsLocallyNoetherian X] [l : IsNormal X] :
       · infer_instance
 
       · --rw [Ring.krullDimLE_iff]
+        have := a.le
+
         sorry
       · have := l.integrallyClosed x
         exact fun _ ↦ IsIntegralClosure.isIntegral_iff.mp
