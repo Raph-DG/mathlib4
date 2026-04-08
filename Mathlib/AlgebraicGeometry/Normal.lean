@@ -14,6 +14,7 @@ public import Mathlib.RingTheory.IntegralClosure.IntegrallyClosed
 public import Mathlib.RingTheory.DiscreteValuationRing.TFAE
 public import Mathlib.RingTheory.KrullDimension.Field
 public import Mathlib.RingTheory.KrullDimension.Basic
+public import Mathlib.RingTheory.RegularLocalRing.Defs
 
 universe u
 namespace AlgebraicGeometry
@@ -28,6 +29,27 @@ lemma IsIntegralInCodimensionOne.stalk_domain {X : Scheme.{u}} [h : IsIntegralIn
   IsDomain (X.presheaf.stalk x) := h.domain x hx
 
 instance {X : Scheme.{u}} [IsIntegral X] : IsIntegralInCodimensionOne X := ⟨inferInstance⟩
+
+class IsRegularInCodimension (k : ℕ) (X : Scheme.{u}) where
+  reg : ∀ (x : X), ringKrullDim (X.presheaf.stalk x) ≤ k → IsRegularLocalRing (X.presheaf.stalk x)
+
+instance {R : Type*} [CommRing R] [IsDomain R] [IsRegularLocalRing R] [Ring.KrullDimLE 1 R] :
+    IsPrincipalIdealRing R := by
+
+  sorry
+
+lemma bingo {R : Type*} [CommRing R] [IsDomain R] (h : ringKrullDim R = 1) :
+    IsRegularLocalRing R ↔ IsDiscreteValuationRing R := by
+  refine ⟨fun _ ↦ ?_, fun _ ↦ inferInstance⟩
+  have : Ring.KrullDimLE 1 R := sorry
+  have : IsPrincipalIdealRing R := inferInstance
+  apply IsDiscreteValuationRing.mk
+  have : (⊥ : Ideal R).height = 0 := Ideal.height_bot
+  rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim] at h
+  suffices ((IsLocalRing.maximalIdeal R).height : WithBot ℕ∞) ≠ (⊥ : Ideal R).height by
+    exact Ne.symm (Ne.symm fun a_1 ↦ this (congrArg WithBot.some (congrArg Ideal.height a_1)))
+  simp [this, h]
+
 
 /--
 We define a scheme to be regular in codimension one if all its stalks at codimension one are DVRs.
