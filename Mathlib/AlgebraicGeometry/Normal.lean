@@ -36,9 +36,13 @@ class IsRegularInCodimension (k : ℕ) (X : Scheme.{u}) where
 instance {R : Type*} [CommRing R] [IsDomain R] [h : IsRegularLocalRing R] [Ring.KrullDimLE 1 R] :
     IsPrincipalIdealRing R := by
   rw [isRegularLocalRing_iff] at h
-  have : ↑(Submodule.spanFinrank (IsLocalRing.maximalIdeal R))  ≤ 1 := sorry
-
-  sorry
+  have : ringKrullDim R ≤ 1 := sorry
+  obtain h | h : ↑(Submodule.spanFinrank (IsLocalRing.maximalIdeal R)) = 0 ∨
+         ↑(Submodule.spanFinrank (IsLocalRing.maximalIdeal R)) = 1 := sorry
+  ·
+    sorry
+  · #check Ideal.iInf_pow_smul_eq_bot_of_isLocalRing
+    sorry
 
 lemma bingo {R : Type*} [CommRing R] [IsDomain R] (h : ringKrullDim R = 1) :
     IsRegularLocalRing R ↔ IsDiscreteValuationRing R := by
