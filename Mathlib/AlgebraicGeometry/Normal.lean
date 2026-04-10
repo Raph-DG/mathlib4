@@ -33,15 +33,17 @@ instance {X : Scheme.{u}} [IsIntegral X] : IsIntegralInCodimensionOne X := ⟨in
 class IsRegularInCodimension (k : ℕ) (X : Scheme.{u}) where
   reg : ∀ (x : X), ringKrullDim (X.presheaf.stalk x) ≤ k → IsRegularLocalRing (X.presheaf.stalk x)
 
-instance {R : Type*} [CommRing R] [IsDomain R] [IsRegularLocalRing R] [Ring.KrullDimLE 1 R] :
+instance {R : Type*} [CommRing R] [IsDomain R] [h : IsRegularLocalRing R] [Ring.KrullDimLE 1 R] :
     IsPrincipalIdealRing R := by
+  rw [isRegularLocalRing_iff] at h
+  have : ↑(Submodule.spanFinrank (IsLocalRing.maximalIdeal R))  ≤ 1 := sorry
 
   sorry
 
 lemma bingo {R : Type*} [CommRing R] [IsDomain R] (h : ringKrullDim R = 1) :
     IsRegularLocalRing R ↔ IsDiscreteValuationRing R := by
   refine ⟨fun _ ↦ ?_, fun _ ↦ inferInstance⟩
-  have : Ring.KrullDimLE 1 R := sorry
+  have : Ring.KrullDimLE 1 R := Ring.krullDimLE_iff.mpr h.le
   have : IsPrincipalIdealRing R := inferInstance
   apply IsDiscreteValuationRing.mk
   have : (⊥ : Ideal R).height = 0 := Ideal.height_bot
@@ -49,7 +51,6 @@ lemma bingo {R : Type*} [CommRing R] [IsDomain R] (h : ringKrullDim R = 1) :
   suffices ((IsLocalRing.maximalIdeal R).height : WithBot ℕ∞) ≠ (⊥ : Ideal R).height by
     exact Ne.symm (Ne.symm fun a_1 ↦ this (congrArg WithBot.some (congrArg Ideal.height a_1)))
   simp [this, h]
-
 
 /--
 We define a scheme to be regular in codimension one if all its stalks at codimension one are DVRs.
@@ -105,6 +106,8 @@ instance (X : Scheme.{u}) [IsLocallyNoetherian X] [l : IsNormal X] :
 
       · --rw [Ring.krullDimLE_iff]
         have := a.le
+
+
 
         sorry
       · have := l.integrallyClosed x
