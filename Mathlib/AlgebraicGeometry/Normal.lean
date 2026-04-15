@@ -131,7 +131,7 @@ theorem RegularLocalRing.PrincilapIdealRing_of_ringKrullDim_eq_one
 
 
 
-instance {R : Type*} [CommRing R] [IsDomain R] [IsRegularLocalRing R] [Ring.KrullDimLE 1 R] :
+instance {R : Type*} [CommRing R] [IsDomain R] [h : IsRegularLocalRing R] [Ring.KrullDimLE 1 R] :
     IsPrincipalIdealRing R := by
 
   /-
