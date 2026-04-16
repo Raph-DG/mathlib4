@@ -26,6 +26,7 @@ Class saying scheme satisfies some property of the local ring at every point whe
 of dimension at most `k`. This is useful to provide a common interface for properties such as
 Serre's `Rₖ` and `Sₖ` detailed in stacks 033Q.
 -/
+@[mk_iff]
 class Scheme.SatisfiesInCodimensionLE
     (k : ℕ) (X : Scheme.{u}) (P : ObjectProperty CommRingCat) where
   stalk_p : ∀ (x : X), ringKrullDim (X.presheaf.stalk x) ≤ k → P (X.presheaf.stalk x)
@@ -38,8 +39,14 @@ More commonly known in the literature as a scheme satisfying `Rₖ` or being reg
 abbrev Scheme.IsRegularInCodimensionLE (k : ℕ) (X : Scheme.{u}) :=
   X.SatisfiesInCodimensionLE k (fun R ↦ IsRegularLocalRing R)
 
+instance {R : Type*} [CommRing R] [r : IsRegularLocalRing R] : IsDomain R := by
+  /-
+  This is in PR 28683 by Nailin Guan
+  -/
+  sorry
+
 theorem RegularLocalRing.PrincilapIdealRing_of_ringKrullDim_eq_one
-    {R : Type*} [CommRing R] [IsDomain R] [r : IsRegularLocalRing R]
+    {R : Type*} [CommRing R] [r : IsRegularLocalRing R]
     (h : ringKrullDim R = 1) : IsPrincipalIdealRing R := by
   classical
   have : (Submodule.spanFinrank (IsLocalRing.maximalIdeal R)) = 1 := by
@@ -47,7 +54,6 @@ theorem RegularLocalRing.PrincilapIdealRing_of_ringKrullDim_eq_one
       simp_all
     rw [isRegularLocalRing_iff] at r
     rwa [← h]
-
   obtain ⟨ϖ, hϖ⟩ : ∃ ϖ, (IsLocalRing.maximalIdeal R) = Submodule.span R {ϖ} := by
     have fg : Submodule.FG (IsLocalRing.maximalIdeal R) := Submodule.FG.of_finite
     obtain ⟨s, hs1, hs2⟩ := Submodule.FG.exists_span_set_encard_eq_spanFinrank fg
@@ -56,13 +62,10 @@ theorem RegularLocalRing.PrincilapIdealRing_of_ringKrullDim_eq_one
     use ϖ
     rw [← hϖ]
     exact hs2.symm
-
   have : Submodule.span R {ϖ} ≠ ⊤ := by
     rw [← hϖ]
     exact Ideal.IsPrime.ne_top'
-
   have inf := Ideal.iInf_pow_eq_bot_of_isLocalRing (Submodule.span R {ϖ}) this
-
   have (x : R) (hx : x ≠ 0) : ∃ n : ℕ, x ∈ (R ∙ ϖ) ^ n ∧ x ∉ (R ∙ ϖ) ^ (n + 1) := by
     by_contra!
     have b : (R ∙ ϖ) ^ 0 = ⊤ := by simp
@@ -78,31 +81,41 @@ theorem RegularLocalRing.PrincilapIdealRing_of_ringKrullDim_eq_one
     simp only [Ideal.submodule_span_eq, Submodule.mem_iInf] at inf
     specialize inf x this
     exact hx inf
-
-
   have thingo (x : R) (hx : x ≠ 0) : ∃ (n : ℕ) (u : Rˣ), x = u * ϖ^n := by
     obtain ⟨n, hx1, hx2⟩ := this x hx
     use n
-    --simp only [Ideal.submodule_span_eq] at hx1 hx2
-    have : ∃ r : R, x = r * ϖ^n := by
-
-      sorry
-
-    /-
-    This is more or less just a rephasing of the above statement - just take n to be the n used
-    there, and unfold definitions
-    -/
-    sorry
+    obtain ⟨r, hr⟩ : ∃ r : R, x = r * ϖ^n := by
+      rw [Submodule.span_pow] at hx1
+      simp only [Set.singleton_pow, Ideal.submodule_span_eq, Ideal.mem_span_singleton] at hx1
+      exact exists_eq_mul_left_of_dvd hx1
+    have : IsUnit r := by
+      rw [← IsLocalRing.notMem_maximalIdeal]
+      intro o
+      rw [hϖ] at o
+      simp only [Ideal.submodule_span_eq, Ideal.mem_span_singleton] at o
+      obtain ⟨m, rfl⟩ := o
+      have hr' : x = m * ϖ ^ (n + 1) := by rw [hr]; ring
+      have : x ∈ (R ∙ ϖ) ^ (n + 1) := by
+        rw [Submodule.span_pow]
+        simp only [Set.singleton_pow, Ideal.submodule_span_eq, Ideal.mem_span_singleton]
+        exact dvd_of_mul_left_eq m (id (Eq.symm hr'))
+      exact hx2 this
+    use this.unit
+    exact hr
   constructor
   intro I
   by_cases h : I = ⊥
   · simp [h, bot_isPrincipal]
   have : ∃ (n : ℕ) (u : Rˣ), u * ϖ^n ∈ I := by
-
-    /-
-    This is really just saying I is has a nonzero element, which is guaranteed by `h`
-    -/
-    sorry
+    obtain ⟨r, hr⟩ : ∃ r : I, r ≠ 0 := by
+      by_contra!
+      simp only [Subtype.forall, Submodule.mk_eq_zero] at this
+      have : I = ⊥ := (Submodule.eq_bot_iff I).mpr this
+      exact h this
+    have ⟨m, l, hl⟩ := thingo r (by simp [hr])
+    use m, l
+    rw [← hl]
+    exact r.2
   let n := Nat.find this
   obtain ⟨u, hu⟩ := Nat.find_spec this
   constructor
@@ -129,24 +142,38 @@ theorem RegularLocalRing.PrincilapIdealRing_of_ringKrullDim_eq_one
     exact hx
   · simp_all [n]
 
+instance {R : Type*} [Field R] : IsPrincipalIdealRing R := inferInstance
 
+instance {R : Type*} [CommRing R]
+    [h : IsRegularLocalRing R] [k : Ring.KrullDimLE 1 R] : IsPrincipalIdealRing R := by
+  rw [Ring.krullDimLE_iff] at k
+  obtain h | h : ringKrullDim R = 0 ∨ ringKrullDim R = 1 := by
+    have : ringKrullDim R ≠ ⊥ := ringKrullDim_ne_bot
+    have : WithBot.unbot _ this ≤ 1 := by exact (WithBot.unbot_le_iff this).mpr k
+    rw [le_iff_lt_or_eq] at this
+    obtain h | h := this
+    · left
+      have ds : (ringKrullDim R).unbot this = 0 := by exact ENat.lt_one_iff_eq_zero.mp h
+      have : (((ringKrullDim R).unbot this) : WithBot ℕ∞) = (0 : WithBot ℕ∞) := by simp [ds]
+      simpa using this
+    · right
+      have : (((ringKrullDim R).unbot this) : WithBot ℕ∞) = (1 : WithBot ℕ∞) := by simp [h]
+      simpa using this
+  · have : IsField R := by
+      apply (allowSynthFailures := true) Ring.KrullDimLE.isField_of_isDomain
+      exact ringKrullDimZero_iff_ringKrullDim_eq_zero.mpr h
+    exact this.isPrincipalIdealRing
+  · exact RegularLocalRing.PrincilapIdealRing_of_ringKrullDim_eq_one h
 
-instance {R : Type*} [CommRing R] [IsDomain R] [h : IsRegularLocalRing R] [Ring.KrullDimLE 1 R] :
-    IsPrincipalIdealRing R := by
-
-  /-
-  Follows easily from the previous lemma
-  -/
-  sorry
-
-lemma bingo {R : Type*} [CommRing R] [IsDomain R] (h : ringKrullDim R = 1) :
-    IsRegularLocalRing R ↔ IsDiscreteValuationRing R := by
-  refine ⟨fun _ ↦ ?_, fun _ ↦ inferInstance⟩
-  have : Ring.KrullDimLE 1 R :=
-    -- This is trivial and I think in a branch somewhere (possibly it has now been merged?)
-    -- Indeed it has been merged now
-    sorry
+lemma isRegularLocalRing_iff_isDiscreteValuationRing_of_ringKrullDim_eq_one {R : Type*} [CommRing R]
+    (h : ringKrullDim R = 1) :
+    IsRegularLocalRing R ↔ ∃ _ : IsDomain R, IsDiscreteValuationRing R := by
+  refine ⟨fun _ ↦ ?_, fun ⟨_, _⟩ ↦ inferInstance⟩
+  have : Ring.KrullDimLE 1 R := by
+    rw [Ring.krullDimLE_iff]
+    exact h.le
   have : IsPrincipalIdealRing R := inferInstance
+  use inferInstance
   apply IsDiscreteValuationRing.mk
   have : (⊥ : Ideal R).height = 0 := Ideal.height_bot
   rw [← IsLocalRing.maximalIdeal_height_eq_ringKrullDim] at h
@@ -161,39 +188,39 @@ class IsNormal (X : Scheme.{u}) where
   domain : ∀ x : X, IsDomain (X.presheaf.stalk x)
   integrallyClosed : ∀ x : X, IsIntegrallyClosed (X.presheaf.stalk x)
 
-open Classical in
-/--
-This is the case because of our lemma above called bingo, these say essentially the same thing
--/
-lemma fdsj (X : Scheme.{u}) : X.IsRegularInCodimensionLE 1 ↔
-  X.SatisfiesInCodimensionLE 1
-  (fun R ↦ ∃ h : IsDomain R, IsDiscreteValuationRing R) := sorry
-
 /--
 A normal, locally Noetherian scheme is regular in codimension one.
 -/
 instance (X : Scheme.{u}) [IsLocallyNoetherian X] [l : IsNormal X] :
     X.IsRegularInCodimensionLE 1 := by
-  rw [fdsj]
   constructor
+
   intro x hx
-  use l.domain x
+
+  --use l.domain x
+
   dsimp
-  have a : ringKrullDim (X.presheaf.stalk x) = 1 := by
+  obtain a | a : ringKrullDim (X.presheaf.stalk x) = 0 ∨ ringKrullDim (X.presheaf.stalk x) = 1 :=
+    sorry
+  · have := l.domain x
+
     /-
-      exact IsDiscreteValuationRing.ringKrullDim_eq_one
-      from the DVR branch (which we now have in mathlib :))
+    This follows because by assumption our ring is a domain of krull dim 0, so in particular it's a
+    field. We should just write a lemma saying that a field is a regular local ring, which will
+    not be very hard.
     -/
     sorry
+
   have m : IsDedekindDomain (X.presheaf.stalk x) := by
     rw [isDedekindDomain_iff (X.presheaf.stalk x) (FractionRing (X.presheaf.stalk x))]
     refine ⟨?_, ?_, ?_, ?_⟩
     · exact l.domain x
     · infer_instance
-    · --rw [Ring.krullDimLE_iff]
-      have := a.le
+    · have := a.le
+
       /-
-      Completely trivial, should be assumption
+      Completely trivial, should be assumption. I guess we have to replace DimesionLEOne with
+      KrullDimLE 1, which sounds annoying.
       -/
       sorry
     · have := l.integrallyClosed x
@@ -205,6 +232,7 @@ instance (X : Scheme.{u}) [IsLocallyNoetherian X] [l : IsNormal X] :
     rw [a] at o
     simp_all
   have := IsDiscreteValuationRing.TFAE (X.presheaf.stalk x) this
-  exact (this.out 0 2).mpr m
+  have := (this.out 0 2).mpr m
+  exact IsRegularLocalRing.instOfIsLocalRingOfIsDomainOfIsPrincipalIdealRing ↑(X.presheaf.stalk x)
 
 end AlgebraicGeometry
