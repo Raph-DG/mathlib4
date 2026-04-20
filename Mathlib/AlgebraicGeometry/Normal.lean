@@ -51,8 +51,10 @@ lemma Submodule.isPrincipal_of_fg_of_spanFinrank_le_one
     {R M : Type*} [Semiring R] [AddCommMonoid M] [Module R M]
     {p : Submodule R M} (hFG : p.FG) (h : p.spanFinrank ≤ 1) : p.IsPrincipal := by
   obtain ⟨s, hs, rfl⟩ := hFG.exists_span_set_encard_eq_spanFinrank
-  have hle : s.encard ≤ 1 := hs ▸ by exact_mod_cast h
-  rcases Set.encard_le_one_iff_eq.mp hle with rfl | ⟨x, rfl⟩
+  have hle : s.encard ≤ 1 := by
+    rw [hs]
+    exact_mod_cast h
+  obtain rfl | ⟨x, rfl⟩ := Set.encard_le_one_iff_eq.mp hle
   · exact ⟨0, by simp⟩
   · exact ⟨x, rfl⟩
 
@@ -61,17 +63,14 @@ lemma IsLocalRing.maximalIdeal_isPrincipal_of_isRegularLocalRing_of_ringKrullDim
     {R : Type*} [CommRing R] [IsRegularLocalRing R] (h : ringKrullDim R ≤ 1) :
     (IsLocalRing.maximalIdeal R).IsPrincipal :=
   Submodule.isPrincipal_of_fg_of_spanFinrank_le_one Submodule.FG.of_finite <| by
-    have hsf := IsRegularLocalRing.spanFinrank_maximalIdeal (R := R)
-    exact_mod_cast hsf.le.trans h
+    exact_mod_cast (IsRegularLocalRing.spanFinrank_maximalIdeal (R := R)).le.trans h
 
 /-- A regular local ring of Krull dimension `1` is a principal ideal ring. -/
-theorem RegularLocalRing.isPrincipalIdealRing_of_ringKrullDim_eq_one
+theorem RegularLocalRing.isPrincipalIdealRing_of_ringKrullDim_le_one
     {R : Type*} [CommRing R] [IsRegularLocalRing R]
-    (h : ringKrullDim R = 1) : IsPrincipalIdealRing R :=
+    (h : ringKrullDim R ≤ 1) : IsPrincipalIdealRing R :=
   ((tfae_of_isNoetherianRing_of_isLocalRing_of_isDomain R).out 4 0).mp
-    (IsLocalRing.maximalIdeal_isPrincipal_of_isRegularLocalRing_of_ringKrullDim_le_one h.le)
-
-instance {R : Type*} [Field R] : IsPrincipalIdealRing R := inferInstance
+    (IsLocalRing.maximalIdeal_isPrincipal_of_isRegularLocalRing_of_ringKrullDim_le_one h)
 
 instance {R : Type*} [CommRing R]
     [IsRegularLocalRing R] [Ring.KrullDimLE 1 R] : IsPrincipalIdealRing R :=
