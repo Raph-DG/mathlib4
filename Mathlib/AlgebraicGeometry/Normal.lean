@@ -87,6 +87,14 @@ lemma isRegularLocalRing_iff_isDiscreteValuationRing_of_ringKrullDim_eq_one {R :
   exact ((IsDiscreteValuationRing.TFAE R hNF).out 4 0).mp
     (IsLocalRing.maximalIdeal_isPrincipal_of_isRegularLocalRing_of_ringKrullDim_le_one h.le)
 
+instance {R : Type*} [Field R] : IsRegularLocalRing R := by
+  simp [isRegularLocalRing_iff, IsLocalRing.maximalIdeal_eq_bot, Submodule.spanFinrank_bot]
+
+lemma _root_.IsField.isRegularLocalRing {R : Type*} [CommRing R] (h : IsField R) :
+    IsRegularLocalRing R := by
+  let u := h.toField
+  infer_instance
+
 /--
 A scheme is called *normal* if every local ring is an integrally closed domain.
 -/
@@ -96,49 +104,51 @@ class IsNormal (X : Scheme.{u}) where
 
 /--
 A normal, locally Noetherian scheme is regular in codimension one.
+
+TODO: prove the ring version firs
 -/
 instance (X : Scheme.{u}) [IsLocallyNoetherian X] [l : IsNormal X] :
     X.IsRegularInCodimensionLE 1 := by
   constructor
 
   intro x hx
-
-  --use l.domain x
-
   dsimp
   obtain a | a : ringKrullDim (X.presheaf.stalk x) = 0 ∨ ringKrullDim (X.presheaf.stalk x) = 1 :=
-    sorry
-  · have := l.domain x
-
     /-
-    This follows because by assumption our ring is a domain of krull dim 0, so in particular it's a
-    field. We should just write a lemma saying that a field is a regular local ring, which will
-    not be very hard.
+    That this isn't exact suggests to me there is some problem with the library, I think the
+    problem is that WithBot ℕ∞ doesn't satisfy whatever it is we need for the obvious lemma to
+    apply.
     -/
     sorry
+  · have := l.domain x
+    have : IsField (X.presheaf.stalk x) :=
+      have : Ring.KrullDimLE 0 (X.presheaf.stalk x) := Ring.krullDimLE_iff.mpr a.le
+      Ring.KrullDimLE.isField_of_isDomain
+    exact this.isRegularLocalRing
 
   have m : IsDedekindDomain (X.presheaf.stalk x) := by
     rw [isDedekindDomain_iff (X.presheaf.stalk x) (FractionRing (X.presheaf.stalk x))]
     refine ⟨?_, ?_, ?_, ?_⟩
     · exact l.domain x
     · infer_instance
-    · have := a.le
-
-      /-
+    · /-
       Completely trivial, should be assumption. I guess we have to replace DimesionLEOne with
       KrullDimLE 1, which sounds annoying.
+
+      TODO: Do this stupid refactor of DimensionLEOne, then the result follows immediately. But
+      who has the time for this nonsense
       -/
       sorry
     · have := l.integrallyClosed x
       exact fun _ ↦ IsIntegralClosure.isIntegral_iff.mp
-
-  have : ¬ IsField (X.presheaf.stalk x) := by
+  infer_instance
+  /-have : ¬ IsField (X.presheaf.stalk x) := by
     intro h
     let o : ringKrullDim ↑(X.presheaf.stalk x) = 0 := ringKrullDim_eq_zero_of_isField h
     rw [a] at o
     simp_all
-  have := IsDiscreteValuationRing.TFAE (X.presheaf.stalk x) this
-  have := (this.out 0 2).mpr m
-  exact IsRegularLocalRing.instOfIsLocalRingOfIsDomainOfIsPrincipalIdealRing ↑(X.presheaf.stalk x)
+  --have := IsDiscreteValuationRing.TFAE (X.presheaf.stalk x) this
+  --have := (this.out 0 2).mpr m
+  infer_instance-/
 
 end AlgebraicGeometry
