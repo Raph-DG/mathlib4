@@ -3,6 +3,7 @@ Copyright (c) 2026 Raphael Douglas Giles. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Raphael Douglas Giles
 -/
+import Mathlib.AlgebraicGeometry.AlgebraicCycle.ResidueFieldFinite
 import Mathlib.AlgebraicGeometry.AlgebraicCycle.StructureSheafVanishing
 
 /-!
@@ -47,6 +48,7 @@ open AlgebraicGeometry Scheme CategoryTheory CategoryTheory.Limits
   CategoryTheory.GrothendieckTopology Order Opposite TopologicalSpace
 
 set_option backward.isDefEq.respectTransparency false
+set_option linter.overlappingInstances false
 
 /-- A morphism into `M` whose values lie pointwise in a submodule `N` factors through `N.ι`;
 see `PresheafOfModules.Submodule.lift_comp_ι`.
@@ -493,7 +495,7 @@ lemma exists_eq_restriction [IsNoetherian X] (hD : D.support ⊆ {x | coheight x
   set B : Set X :=
     (suppSet D t.1 ∪ ((U : Set X) ∩ Function.support ⇑(div g + D))) \ {z} with hB_def
   have hBfin : B.Finite :=
-    Set.Finite.diff (Set.Finite.union t.2
+    Set.Finite.sdiff (Set.Finite.union t.2
       (LocallyFiniteSupport.finite_inter_support_of_isCompact
         (div g + D).locallyFiniteSupport (NoetherianSpace.isCompact (U : Set X))))
   have hBcodim : ∀ p ∈ B, coheight p = 1 := by
@@ -506,8 +508,7 @@ lemma exists_eq_restriction [IsNoetherian X] (hD : D.support ⊆ {x | coheight x
         by_contra h0
         exact h1 (hD (Function.mem_support.mpr h0))
       refine hp ?_
-      simp only [Function.mem_support, ne_eq, not_not,
-        Function.locallyFinsuppWithin.coe_add, Pi.add_apply, div_eq_ord]
+      simp only [Function.locallyFinsuppWithin.coe_add, Pi.add_apply, div_eq_ord]
       omega
   have hBclosed : IsClosed B := by
     rw [← Set.biUnion_of_singleton B]
@@ -518,7 +519,7 @@ lemma exists_eq_restriction [IsNoetherian X] (hD : D.support ⊆ {x | coheight x
   obtain ⟨q, hq1, hqV⟩ := i
   have hqU' : q ∈ U := (inf_le_left : U ⊓ ⟨Bᶜ, hBclosed.isOpen_compl⟩ ≤ U) hqV
   have hqB : q ∉ B := (inf_le_right : U ⊓ ⟨Bᶜ, hBclosed.isOpen_compl⟩ ≤ _) hqV
-  show Component.mk D hq1 (eval ⟨⟨genericPoint_mem hqV⟩⟩ (constSection g)) =
+  change Component.mk D hq1 (eval ⟨⟨genericPoint_mem hqV⟩⟩ (constSection g)) =
     t.1 ⟨q, hq1, hqU'⟩
   rw [eval_constSection]
   rcases eq_or_ne q z with rfl | hqz
