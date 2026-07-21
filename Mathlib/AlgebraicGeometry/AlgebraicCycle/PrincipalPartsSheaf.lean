@@ -369,6 +369,7 @@ lemma finite_suppSet_toPartsFun [IsNoetherian X] {U : (Opens ↥X)ᵒᵖ}
     push_neg at hne'
     obtain ⟨hf0, hlt⟩ := hne'
     refine ⟨h.2, Function.mem_support.mpr ?_⟩
+    change ⇑(div f + D) q ≠ 0
     simp only [Function.locallyFinsuppWithin.coe_add, Pi.add_apply, div_eq_ord]
     omega
 
