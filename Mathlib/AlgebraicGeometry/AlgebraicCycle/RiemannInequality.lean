@@ -5,6 +5,8 @@ Authors: Raphael Douglas Giles
 -/
 import Mathlib.AlgebraicGeometry.AlgebraicCycle.H1Cokernel
 import Mathlib.LinearAlgebra.Basis.Defs
+import Mathlib.Algebra.Polynomial.Basis
+import Mathlib.FieldTheory.IntermediateField.Adjoin.Defs
 
 /-!
 # Towards Riemann's inequality
@@ -907,6 +909,306 @@ theorem finite_partsCoker_of_degree_le
     exact hle.trans_le hgoal
 
 end Reduction
+
+/-! ### The field degree is bounded by the pole degree
+
+For a transcendental rational function `f`, any family of elements of `k(X)` linearly
+independent over `k(f)` has size at most `deg (f)_∞`: the products `f^j·yᵢ`, `0 ≤ j ≤ m`,
+are `k`-linearly independent (powers of a transcendental element are independent, and
+independence multiplies through the tower `k ⊆ k(f) ⊆ k(X)`) and lie in
+`L(m·(f)_∞ + C₀)`, whose dimension is at most `m·deg (f)_∞ + O(1)` by the Riemann upper
+bound. In particular `k(X)` is a **finite** extension of `k(f)`, of degree at most
+`deg (f)_∞` — with no input from the dimension theory of finitely generated algebras. -/
+
+section FieldDegree
+
+variable [IsRegularInCodimensionOne X] [IsNoetherian X]
+
+/-- A Noetherian scheme is compact (for the degree additivity of divisors). -/
+noncomputable instance : CompactSpace ↥X := ⟨NoetherianSpace.isCompact _⟩
+
+/-- Powers of a transcendental element are linearly independent over the base field. -/
+lemma linearIndependent_pow_of_transcendental {A : Type u} [CommRing A] [Algebra k A]
+    {x : A} (hx : Transcendental k x) :
+    LinearIndependent k fun j : ℕ => x ^ j := by
+  have hker : LinearMap.ker (Polynomial.aeval (R := k) x).toLinearMap = ⊥ := by
+    rw [LinearMap.ker_eq_bot']
+    intro p hp
+    exact transcendental_iff.mp hx p hp
+  have h := (Polynomial.basisMonomials k).linearIndependent.map'
+    (Polynomial.aeval (R := k) x).toLinearMap hker
+  have heq : (⇑(Polynomial.aeval (R := k) x).toLinearMap ∘ ⇑(Polynomial.basisMonomials k))
+      = fun j : ℕ => x ^ j := by
+    funext j
+    simp [Polynomial.coe_basisMonomials, Polynomial.aeval_monomial]
+  rwa [heq] at h
+
+omit [IsRegularInCodimensionOne X] [IsNoetherian X] in
+/-- The order of `1` vanishes everywhere. -/
+lemma ord_one (z : X) : X.ord (1 : ↑X.functionField) z = 0 := by
+  by_cases hz : coheight z = 1
+  · rw [ord_eq_iff hz one_ne_zero]
+    simp
+  · exact Scheme.ord_eq_zero_of_coheight_neq_one hz 1
+
+omit [IsRegularInCodimensionOne X] [IsNoetherian X] in
+/-- The order of a power. -/
+lemma ord_pow {f : ↑X.functionField} (hf0 : f ≠ 0) (j : ℕ) (z : X) :
+    X.ord (f ^ j) z = (j : ℤ) * X.ord f z := by
+  induction j with
+  | zero => simpa using ord_one z
+  | succ i ih =>
+    by_cases hz : coheight z = 1
+    · rw [pow_succ, ord_mul hz (pow_ne_zero i hf0) hf0, ih]
+      push_cast
+      ring
+    · rw [Scheme.ord_eq_zero_of_coheight_neq_one hz,
+        Scheme.ord_eq_zero_of_coheight_neq_one hz]
+      ring
+
+variable (X) in
+/-- The pole divisor `(f)_∞` of a rational function: `max 0 (−ord_q f)` at each point. -/
+noncomputable def polePart (f : ↑X.functionField) : AlgebraicCycle X ℤ where
+  toFun q := max 0 (- X.ord f q)
+  supportWithinDomain' := by simp
+  supportLocallyFiniteWithinDomain' z hz := by
+    obtain ⟨t, ht, hfin⟩ := (div f).supportLocallyFiniteWithinDomain' z hz
+    refine ⟨t, ht, hfin.subset fun q hq => ⟨hq.1, ?_⟩⟩
+    have h1 : max 0 (- X.ord f q) ≠ 0 := hq.2
+    have h2 : X.ord f q ≠ 0 := by omega
+    simpa [div_eq_ord] using h2
+
+lemma polePart_nonneg (f : ↑X.functionField) : 0 ≤ polePart X f := fun q => by
+  show (0 : AlgebraicCycle X ℤ) q ≤ max 0 (- X.ord f q)
+  have h0 : (0 : AlgebraicCycle X ℤ) q = 0 := rfl
+  omega
+
+lemma polePart_support (f : ↑X.functionField) :
+    (polePart X f).support ⊆ {x | coheight x = 1} := fun q hq => by
+  have h1 : max 0 (- X.ord f q) ≠ 0 := hq
+  show coheight q = 1
+  by_contra h
+  rw [Scheme.ord_eq_zero_of_coheight_neq_one h] at h1
+  simp at h1
+
+/-- Every rational function is a global section of `𝒪ₓ((f)_∞)`. -/
+lemma mem_carrier_polePart (f : ↑X.functionField) :
+    f ∈ Sheaf.carrier (polePart X f) ⊤ :=
+  Sheaf.mem_carrier_iff.mpr fun _ => ⟨⟨⟨genericPoint X, trivial⟩⟩, fun z _ => by
+    show 0 ≤ X.ord f z + max 0 (- X.ord f z)
+    omega⟩
+
+variable (X) in
+/-- Evaluation of cycles at a point, as an additive map. -/
+noncomputable def evalCycle (q : X) : AlgebraicCycle X ℤ →+ ℤ where
+  toFun D := D q
+  map_zero' := rfl
+  map_add' _ _ := rfl
+
+lemma cycle_finset_sum_apply {ι : Type*} (s : Finset ι) (D : ι → AlgebraicCycle X ℤ)
+    (q : X) : (∑ i ∈ s, D i) q = ∑ i ∈ s, D i q :=
+  map_sum (evalCycle X q) D s
+
+lemma cycle_nsmul_apply (m : ℕ) (B : AlgebraicCycle X ℤ) (q : X) :
+    (m • B) q = (m : ℤ) * B q := by
+  have h := map_nsmul (evalCycle X q) m B
+  simpa [nsmul_eq_mul] using h
+
+lemma degree_zero : (0 : AlgebraicCycle X ℤ).degree k = 0 := by
+  rw [AlgebraicCycle.degree]
+  convert finsum_zero with q
+  show (0 : AlgebraicCycle X ℤ) q * _ = 0
+  rw [show (0 : AlgebraicCycle X ℤ) q = 0 from rfl, zero_mul]
+
+lemma degree_nsmul (m : ℕ) (D : AlgebraicCycle X ℤ) :
+    (m • D).degree k = (m : ℤ) * D.degree k := by
+  induction m with
+  | zero =>
+    rw [zero_nsmul, degree_zero k]
+    simp
+  | succ i ih =>
+    rw [succ_nsmul, AlgebraicCycle.degree_sum k _ _, ih]
+    push_cast
+    ring
+
+lemma degree_nonneg {D : AlgebraicCycle X ℤ} (hD : 0 ≤ D) : 0 ≤ D.degree k := by
+  rw [AlgebraicCycle.degree]
+  refine finsum_nonneg fun q => ?_
+  have h1 : (0 : ℤ) ≤ D q := by
+    have h2 := hD q
+    rwa [show (0 : AlgebraicCycle X ℤ) q = 0 from rfl] at h2
+  exact mul_nonneg h1 (by positivity)
+
+open IntermediateField in
+/-- **The field degree is bounded by the pole degree.** Any family of rational functions
+linearly independent over `k(f)` has size at most `deg (f)_∞`. -/
+theorem card_le_degree_polePart
+    (hκ : ∀ (q : X), coheight q = 1 → Module.Finite k ↑(X.residueField q))
+    (hL0 : Module.Finite k (LSubmodule X k (0 : AlgebraicCycle X ℤ)))
+    {f : ↑X.functionField} (hft : Transcendental k f)
+    {n : ℕ} {y : Fin n → ↑X.functionField}
+    (hy : LinearIndependent ↥(adjoin k {f}) y) :
+    (n : ℤ) ≤ (polePart X f).degree k := by
+  classical
+  have hf0 : f ≠ 0 := fun h => hft (h ▸ isAlgebraic_zero)
+  set B := polePart X f with hB
+  set E : Fin n → AlgebraicCycle X ℤ := fun i => polePart X (y i) with hE
+  set C₀ : AlgebraicCycle X ℤ := ∑ i, E i with hC₀
+  -- the sum of the pole divisors of the `yᵢ` is effective and supported in codimension one
+  have hC₀pos : 0 ≤ C₀ := by
+    intro q
+    show (0 : AlgebraicCycle X ℤ) q ≤ (∑ i, E i) q
+    rw [cycle_finset_sum_apply, show (0 : AlgebraicCycle X ℤ) q = 0 from rfl]
+    refine Finset.sum_nonneg fun i _ => ?_
+    show (0 : ℤ) ≤ max 0 (- X.ord (y i) q)
+    omega
+  have hC₀cod : C₀.support ⊆ {x | coheight x = 1} := by
+    intro q hq
+    have h1 : (∑ i, E i) q ≠ 0 := hq
+    rw [cycle_finset_sum_apply] at h1
+    obtain ⟨i, -, hi⟩ := Finset.exists_ne_zero_of_sum_ne_zero h1
+    exact polePart_support (y i) (Function.mem_support.mpr hi)
+  -- each `yᵢ` is a section of `𝒪(C₀)`
+  have hEle : ∀ i, E i ≤ C₀ := fun i => by
+    intro q
+    show E i q ≤ (∑ j, E j) q
+    rw [cycle_finset_sum_apply]
+    exact Finset.single_le_sum (f := fun j => E j q)
+      (fun j _ => by show (0 : ℤ) ≤ max 0 (- X.ord (y j) q); omega) (Finset.mem_univ i)
+  have hyC : ∀ i, y i ∈ Sheaf.carrier C₀ ⊤ := fun i =>
+    carrier_mono (hEle i) (mem_carrier_polePart (y i))
+  -- effectivity and support of the tower divisors
+  have hDpos : ∀ m : ℕ, 0 ≤ m • B + C₀ := fun m =>
+    add_nonneg (nsmul_nonneg (polePart_nonneg f) m) hC₀pos
+  have hDcod : ∀ m : ℕ, (m • B + C₀).support ⊆ {x | coheight x = 1} := by
+    intro m q hq
+    have h1 : (m • B) q + C₀ q ≠ 0 := hq
+    rcases eq_or_ne ((m • B) q) 0 with h2 | h2
+    · exact hC₀cod (Function.mem_support.mpr fun h3 => h1 (by rw [h2, h3, add_zero]))
+    · rw [cycle_nsmul_apply] at h2
+      have h4 : B q ≠ 0 := fun h5 => h2 (by rw [h5, mul_zero])
+      exact polePart_support f (Function.mem_support.mpr h4)
+  -- the products `f^j·yᵢ` are independent sections of `L(m·B + C₀)`
+  have key : ∀ m : ℕ, (m + 1) * n ≤ Module.finrank k (LSubmodule X k (m • B + C₀)) := by
+    intro m
+    haveI := finite_LSubmodule k hκ hL0 _ (hDpos m) (hDcod m)
+    have hmem : ∀ p : Fin (m + 1) × Fin n,
+        f ^ (p.1 : ℕ) * y p.2 ∈ LSubmodule X k (m • B + C₀) := by
+      rintro ⟨j, i⟩
+      have hy0 : y i ≠ 0 := hy.ne_zero i
+      rw [mem_LSubmodule_iff]
+      refine Sheaf.mem_carrier_iff.mpr fun hne =>
+        ⟨⟨⟨genericPoint X, trivial⟩⟩, fun z _ => ?_⟩
+      have hyz := (Sheaf.mem_carrier_iff.mp (hyC i) hy0).2 z trivial
+      have hordp : X.ord (f ^ (j : ℕ) * y i) z
+          = ((j : ℕ) : ℤ) * X.ord f z + X.ord (y i) z := by
+        by_cases hz1 : coheight z = 1
+        · rw [ord_mul hz1 (pow_ne_zero _ hf0) hy0, ord_pow hf0]
+        · rw [Scheme.ord_eq_zero_of_coheight_neq_one hz1,
+            Scheme.ord_eq_zero_of_coheight_neq_one hz1,
+            Scheme.ord_eq_zero_of_coheight_neq_one hz1]
+          ring
+      have happ : (m • B + C₀) z = (m : ℤ) * max 0 (- X.ord f z) + C₀ z := by
+        have h1 : (m • B + C₀) z = (m • B) z + C₀ z := rfl
+        rw [h1, cycle_nsmul_apply]
+        rfl
+      have hj2 : ((j : ℕ) : ℤ) ≤ (m : ℤ) := by
+        exact_mod_cast Nat.lt_succ_iff.mp j.isLt
+      have hbound : -((m : ℤ) * max 0 (- X.ord f z)) ≤ ((j : ℕ) : ℤ) * X.ord f z := by
+        by_cases h : 0 ≤ X.ord f z
+        · have h1 : (0 : ℤ) ≤ ((j : ℕ) : ℤ) * X.ord f z := mul_nonneg (by positivity) h
+          have h2 : max 0 (- X.ord f z) = 0 := by omega
+          rw [h2, mul_zero, neg_zero]
+          exact h1
+        · have h' : X.ord f z < 0 := not_le.mp h
+          have h2 : max 0 (- X.ord f z) = - X.ord f z := by omega
+          rw [h2]
+          have h3 : (m : ℤ) * X.ord f z ≤ ((j : ℕ) : ℤ) * X.ord f z :=
+            mul_le_mul_of_nonpos_right hj2 (le_of_lt h')
+          have h4 : -((m : ℤ) * - X.ord f z) = (m : ℤ) * X.ord f z := by ring
+          rw [h4]
+          exact h3
+      rw [hordp, happ]
+      linarith [hbound, hyz]
+    -- independence of the products through the tower
+    have hgen : Transcendental k (AdjoinSimple.gen k f) := by
+      rintro ⟨p, hp0, hp⟩
+      refine hft ⟨p, hp0, ?_⟩
+      have h3 := Polynomial.aeval_algebraMap_apply ↑X.functionField
+        (AdjoinSimple.gen k f) p
+      rw [IntermediateField.AdjoinSimple.algebraMap_gen] at h3
+      rw [h3, hp]
+      exact map_zero _
+    have hpow : LinearIndependent k
+        fun j : Fin (m + 1) => (AdjoinSimple.gen k f) ^ (j : ℕ) :=
+      (linearIndependent_pow_of_transcendental k hgen).comp
+        (fun j : Fin (m + 1) => (j : ℕ)) Fin.val_injective
+    have hsm := _root_.linearIndependent_smul hpow hy
+    have hfun : (fun p : Fin (m + 1) × Fin n =>
+          ((AdjoinSimple.gen k f) ^ (p.1 : ℕ)) • y p.2)
+        = fun p : Fin (m + 1) × Fin n => f ^ (p.1 : ℕ) * y p.2 := by
+      funext p
+      rw [Algebra.smul_def]
+      congr 1
+    rw [hfun] at hsm
+    have hres : LinearIndependent k fun p : Fin (m + 1) × Fin n =>
+        (⟨f ^ (p.1 : ℕ) * y p.2, hmem p⟩ : ↥(LSubmodule X k (m • B + C₀))) := by
+      apply LinearIndependent.of_comp (LSubmodule X k (m • B + C₀)).subtype
+      exact hsm
+    have hcard := hres.fintype_card_le_finrank
+    simpa using hcard
+  -- the Riemann upper bound along the tower
+  have upper : ∀ m : ℕ, (Module.finrank k (LSubmodule X k (m • B + C₀)) : ℤ)
+      ≤ (m : ℤ) * B.degree k + (C₀.degree k
+        + (Module.finrank k (LSubmodule X k (0 : AlgebraicCycle X ℤ)) : ℤ)) := by
+    intro m
+    have h1 := finrank_LSubmodule_le k hκ hL0 _ (hDpos m) (hDcod m)
+    have h2 : (m • B + C₀).degree k = (m : ℤ) * B.degree k + C₀.degree k := by
+      rw [AlgebraicCycle.degree_sum k _ _, degree_nsmul]
+    rw [h2] at h1
+    linarith
+  -- conclude: `n ≤ deg B` by taking `m` large
+  set d := B.degree k with hd
+  set c := C₀.degree k
+    + (Module.finrank k (LSubmodule X k (0 : AlgebraicCycle X ℤ)) : ℤ) with hc
+  have hc0 : 0 ≤ c := add_nonneg (degree_nonneg k hC₀pos) (by positivity)
+  by_contra hlt
+  push_neg at hlt
+  set m : ℕ := c.toNat + 1 with hm
+  have h3 : ((m : ℤ) + 1) * n ≤ (m : ℤ) * d + c := by
+    calc ((m : ℤ) + 1) * n = (((m + 1) * n : ℕ) : ℤ) := by push_cast; ring
+      _ ≤ (Module.finrank k (LSubmodule X k (m • B + C₀)) : ℤ) := by
+          exact_mod_cast key m
+      _ ≤ (m : ℤ) * d + c := upper m
+  have h4 : (m : ℤ) * d ≤ (m : ℤ) * ((n : ℤ) - 1) :=
+    mul_le_mul_of_nonneg_left (by omega) (by positivity)
+  have h5 : ((m : ℤ) + 1) * n ≤ (m : ℤ) * ((n : ℤ) - 1) + c :=
+    le_trans h3 (by linarith [h4])
+  have h6 : (n : ℤ) + (m : ℤ) ≤ c := by nlinarith [h5]
+  have h7 : (c.toNat : ℤ) = c := Int.toNat_of_nonneg hc0
+  omega
+
+open IntermediateField in
+/-- **Finiteness of the field degree.** `k(X)` is a finite extension of `k(f)` for any
+transcendental rational function `f`. This discharges the field-theoretic input to
+Chevalley's proof of Riemann's inequality without any dimension theory of finitely
+generated algebras. -/
+theorem finite_adjoin_of_transcendental
+    (hκ : ∀ (q : X), coheight q = 1 → Module.Finite k ↑(X.residueField q))
+    (hL0 : Module.Finite k (LSubmodule X k (0 : AlgebraicCycle X ℤ)))
+    {f : ↑X.functionField} (hft : Transcendental k f) :
+    Module.Finite ↥(adjoin k {f}) ↑X.functionField := by
+  rw [← Module.rank_lt_aleph0_iff]
+  have hbound : Module.rank ↥(adjoin k {f}) ↑X.functionField
+      ≤ (((polePart X f).degree k).toNat : Cardinal) := by
+    refine _root_.rank_le fun s hs => ?_
+    have h1 := card_le_degree_polePart k hκ hL0 hft
+      (y := fun i : Fin s.card => (s.equivFin.symm i : ↑X.functionField))
+      (hs.comp _ s.equivFin.symm.injective)
+    omega
+  exact lt_of_le_of_lt hbound Cardinal.natCast_lt_aleph0
+
+end FieldDegree
 
 /-! ### Riemann–Roch, assuming only the divisor-theoretic Riemann inequality -/
 
