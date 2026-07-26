@@ -533,6 +533,164 @@ theorem exists_adapted_family
   rw [hLord] at hfin
   omega
 
+open IntermediateField in
+/-- **The adapted family is `k(f)`-linearly independent**: clearing denominators through
+`mem_adjoin_simple_iff` reduces to the polynomial statement of `exists_adapted_family`. -/
+theorem exists_linearIndependent_adapted
+    (hκ : ∀ (q : X), coheight q = 1 → Module.Finite k ↑(X.residueField q))
+    {f : ↑X.functionField} (hft : Transcendental k f)
+    (hwit : ∀ q q' : X, coheight q = 1 → coheight q' = 1 → q ≠ q' →
+      ∃ h : ↑X.functionField, 0 ≤ X.ord h q ∧ X.ord h q' < 0) :
+    ∃ g : (Σ q : ↥(support_finite (polePart X f)).toFinset,
+        Fin ((polePart X f) q.1).toNat ×
+          Fin (Module.finrank k ↑(X.residueField q.1))) → ↑X.functionField,
+      LinearIndependent ↥(adjoin k {f}) g := by
+  classical
+  have hf0 : f ≠ 0 := fun h => hft (h ▸ isAlgebraic_zero)
+  obtain ⟨g, hg⟩ := exists_adapted_family k hκ hf0 hwit
+  refine ⟨g, ?_⟩
+  rw [linearIndependent_iff']
+  intro s coeffs hsum σ₁ hσ₁mem
+  by_contra hne
+  -- represent the coefficients as quotients of polynomials in `f`
+  have hrep : ∀ σ, ∃ r t : Polynomial k,
+      ((coeffs σ : ↥(adjoin k {f})) : ↑X.functionField)
+        = Polynomial.aeval f r / Polynomial.aeval f t :=
+    fun σ => (IntermediateField.mem_adjoin_simple_iff _ _).mp (coeffs σ).2
+  choose r₀ t₀ hrt using hrep
+  -- normalize: use `(0, 1)` for the zero coefficients
+  set r' : _ → Polynomial k := fun σ => if coeffs σ = 0 then 0 else r₀ σ with hr'
+  set t' : _ → Polynomial k := fun σ => if coeffs σ = 0 then 1 else t₀ σ with ht'
+  have ht'0 : ∀ σ, Polynomial.aeval f (t' σ) ≠ 0 := by
+    intro σ
+    simp only [ht']
+    split_ifs with h
+    · rw [map_one]
+      exact one_ne_zero
+    · intro h0
+      refine h (Subtype.ext ?_)
+      rw [hrt σ, h0, div_zero]
+      rfl
+  have hrep' : ∀ σ, ((coeffs σ : ↥(adjoin k {f})) : ↑X.functionField)
+      = Polynomial.aeval f (r' σ) / Polynomial.aeval f (t' σ) := by
+    intro σ
+    simp only [hr', ht']
+    split_ifs with h
+    · rw [h, map_zero]
+      simp
+    · exact hrt σ
+  -- the cleared-denominator coefficients
+  set cc : _ → Polynomial k :=
+    fun σ => if σ ∈ s then r' σ * (Finset.univ.erase σ).prod t' else 0 with hcc
+  set T : Polynomial k := ∏ σ, t' σ with hT
+  -- the cleared sum vanishes
+  have hA : ∑ σ, Polynomial.aeval f (cc σ) * g σ = 0 := by
+    have hsum' : ∑ τ ∈ s, ((coeffs τ : ↥(adjoin k {f})) : ↑X.functionField) * g τ = 0 := by
+      rw [← hsum]
+      exact Finset.sum_congr rfl fun τ _ => (Algebra.smul_def (coeffs τ) (g τ)).symm
+    have hstep : ∀ σ, Polynomial.aeval f (cc σ) * g σ
+        = if σ ∈ s then
+            Polynomial.aeval f (r' σ * (Finset.univ.erase σ).prod t') * g σ
+          else 0 := by
+      intro σ
+      simp only [hcc]
+      split_ifs with h
+      · rfl
+      · rw [map_zero, zero_mul]
+    calc ∑ σ, Polynomial.aeval f (cc σ) * g σ
+        = ∑ σ ∈ s, Polynomial.aeval f (r' σ * (Finset.univ.erase σ).prod t') * g σ := by
+          rw [Finset.sum_congr rfl fun σ _ => hstep σ, Finset.sum_ite_mem,
+            Finset.univ_inter]
+      _ = Polynomial.aeval f T
+          * ∑ τ ∈ s, ((coeffs τ : ↥(adjoin k {f})) : ↑X.functionField) * g τ := by
+          rw [Finset.mul_sum]
+          refine Finset.sum_congr rfl fun τ hτ => ?_
+          have hTs : Polynomial.aeval f T
+              = Polynomial.aeval f (t' τ)
+                * Polynomial.aeval f ((Finset.univ.erase τ).prod t') := by
+            rw [hT, ← map_mul, Finset.mul_prod_erase _ _ (Finset.mem_univ τ)]
+          rw [hrep' τ, hTs, map_mul]
+          field_simp
+          rw [mul_div_cancel_right₀ _ (ht'0 τ)]
+      _ = 0 := by rw [hsum', mul_zero]
+  -- but the coefficient at `σ₁` is nonzero
+  have hccσ₁ : cc σ₁ ≠ 0 := by
+    simp only [hcc]
+    rw [if_pos hσ₁mem]
+    refine mul_ne_zero ?_ ?_
+    · intro h0
+      have h1 := hrep' σ₁
+      rw [h0, map_zero, zero_div] at h1
+      exact hne (Subtype.ext h1)
+    · refine Finset.prod_ne_zero_iff.mpr fun τ _ => ?_
+      intro h0
+      refine ht'0 τ ?_
+      simp only [ht']
+      rw [h0]
+      exact map_zero _
+  exact hg cc ⟨σ₁, hccσ₁⟩ hA
+
+open IntermediateField in
+/-- **The fundamental inequality** `deg (f)_∞ ≤ [k(X) : k(f)]`: the adapted family has
+`deg (f)_∞` members and is `k(f)`-linearly independent. -/
+theorem degree_polePart_le_finrank
+    (hκ : ∀ (q : X), coheight q = 1 → Module.Finite k ↑(X.residueField q))
+    (hL0 : Module.Finite k (LSubmodule X k (0 : AlgebraicCycle X ℤ)))
+    {f : ↑X.functionField} (hft : Transcendental k f)
+    (hwit : ∀ q q' : X, coheight q = 1 → coheight q' = 1 → q ≠ q' →
+      ∃ h : ↑X.functionField, 0 ≤ X.ord h q ∧ X.ord h q' < 0) :
+    (polePart X f).degree k
+      ≤ (Module.finrank ↥(adjoin k {f}) ↑X.functionField : ℤ) := by
+  classical
+  obtain ⟨g, hli⟩ := exists_linearIndependent_adapted k hκ hft hwit
+  haveI := finite_adjoin_of_transcendental k hκ hL0 hft
+  have hcard := hli.fintype_card_le_finrank
+  -- identify the cardinality with the degree
+  set B := polePart X f with hB
+  set P : Finset X := (support_finite B).toFinset with hP
+  have hcod : ∀ q ∈ P, coheight q = 1 := fun q hq =>
+    polePart_support f (Function.mem_support.mpr (by
+      rw [hP, Set.Finite.mem_toFinset] at hq
+      exact hq))
+  have hBnonneg : ∀ q : X, 0 ≤ B q := fun q => by
+    have h1 := polePart_nonneg f q
+    rwa [show (0 : AlgebraicCycle X ℤ) q = 0 from rfl] at h1
+  have hcount : ((Fintype.card (Σ q : ↥P,
+      Fin (B q.1).toNat × Fin (Module.finrank k ↑(X.residueField q.1)))) : ℤ)
+      = B.degree k := by
+    rw [Fintype.card_sigma]
+    simp only [Fintype.card_prod, Fintype.card_fin]
+    rw [AlgebraicCycle.degree,
+      finsum_eq_finsetSum_of_support_subset
+        (fun q => B q * (Module.finrank k ↑(X.residueField q) : ℤ)) (s := P)
+        (by
+          intro q hq
+          have hq' : B q ≠ 0 := left_ne_zero_of_mul hq
+          exact Finset.mem_coe.mpr ((Set.Finite.mem_toFinset _).mpr hq')),
+      ← Finset.sum_coe_sort P
+        (fun q => B q * (Module.finrank k ↑(X.residueField q) : ℤ))]
+    rw [Nat.cast_sum]
+    refine Finset.sum_congr rfl fun q _ => ?_
+    push_cast
+    rw [Int.toNat_of_nonneg (hBnonneg q.1)]
+  omega
+
+open IntermediateField in
+/-- **The degree identity** `deg (f)_∞ = [k(X) : k(f)]` for a transcendental rational
+function: both inequalities of the classical theorem. -/
+theorem degree_polePart_eq_finrank
+    (hκ : ∀ (q : X), coheight q = 1 → Module.Finite k ↑(X.residueField q))
+    (hL0 : Module.Finite k (LSubmodule X k (0 : AlgebraicCycle X ℤ)))
+    {f : ↑X.functionField} (hft : Transcendental k f)
+    (hwit : ∀ q q' : X, coheight q = 1 → coheight q' = 1 → q ≠ q' →
+      ∃ h : ↑X.functionField, 0 ≤ X.ord h q ∧ X.ord h q' < 0) :
+    (polePart X f).degree k
+      = (Module.finrank ↥(adjoin k {f}) ↑X.functionField : ℤ) := by
+  refine le_antisymm (degree_polePart_le_finrank k hκ hL0 hft hwit) ?_
+  haveI := finite_adjoin_of_transcendental k hκ hL0 hft
+  exact card_le_degree_polePart k hκ hL0 hft
+    (Module.finBasis ↥(adjoin k {f}) ↑X.functionField).linearIndependent
+
 end Adapted
 
 end AlgebraicGeometry.AlgebraicCycle.SheafViaSubmodule
