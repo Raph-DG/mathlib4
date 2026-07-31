@@ -693,4 +693,229 @@ theorem degree_polePart_eq_finrank
 
 end Adapted
 
+/-! ### The incomparability witnesses from separatedness
+
+If no rational function separates two codimension-one points `q ≠ q'` (regular at `q`,
+pole at `q'`), then `𝒪_q ⊆ 𝒪_{q'}`, which forces `ord_{q'} = c · ord_q` and hence equality
+of the two valuation subrings of `k(X)`. The common valuation subring then admits two
+distinct centers on `X` — two lifts of the same valuative square — contradicting the
+uniqueness part of the valuative criterion for the separated structure morphism. -/
+
+section Witnesses
+
+omit k in
+/-- The order of an integer power. -/
+lemma ord_zpow {f : ↑X.functionField} (hf0 : f ≠ 0) (n : ℤ) (z : X) :
+    X.ord (f ^ n) z = n * X.ord f z := by
+  cases n with
+  | ofNat n' =>
+    rw [Int.ofNat_eq_natCast, zpow_natCast, ord_pow hf0]
+  | negSucc n' =>
+    rw [zpow_negSucc, ord_inv (pow_ne_zero _ hf0), ord_pow hf0, Int.negSucc_eq]
+    push_cast
+    ring
+
+/-- **The incomparability witnesses.** For a separated structure morphism, any two distinct
+codimension-one points are separated by a rational function: regular at the first, with a
+pole at the second. -/
+theorem exists_ord_witness_of_isSeparated
+    [IsSeparated (X ↘ Spec (CommRingCat.of k))]
+    {q q' : X} (hq : coheight q = 1) (hq' : coheight q' = 1) (hne : q ≠ q') :
+    ∃ h : ↑X.functionField, 0 ≤ X.ord h q ∧ X.ord h q' < 0 := by
+  by_contra hcon
+  push_neg at hcon
+  -- Step A: `ord_{q'} = c · ord_q` on nonzero elements
+  obtain ⟨u, hu0, hu1⟩ := exists_ord_eq_one hq
+  set c : ℤ := X.ord u q' with hc
+  have hc0 : 0 ≤ c := hcon u (by omega)
+  have hkey : ∀ x : ↑X.functionField, x ≠ 0 → X.ord x q' = X.ord x q * c := by
+    intro x hx
+    set m := X.ord x q with hm
+    have hx1 : x * u ^ (-m) ≠ 0 := mul_ne_zero hx (zpow_ne_zero _ hu0)
+    have h1 : X.ord (x * u ^ (-m)) q = 0 := by
+      rw [ord_mul hq hx (zpow_ne_zero _ hu0), ord_zpow hu0, hu1]
+      omega
+    have h2 : 0 ≤ X.ord (x * u ^ (-m)) q' := hcon _ (by omega)
+    have h3 : X.ord (x * u ^ (-m))⁻¹ q = 0 := by
+      rw [ord_inv hx1, h1]
+      ring
+    have h4 : 0 ≤ X.ord (x * u ^ (-m))⁻¹ q' := hcon _ (by omega)
+    rw [ord_inv hx1] at h4
+    have h5 : X.ord (x * u ^ (-m)) q' = 0 := by omega
+    rw [ord_mul hq' hx (zpow_ne_zero _ hu0), ord_zpow hu0, ← hc] at h5
+    have h6 : (-m) * c = -(m * c) := by ring
+    linarith [h5, h6]
+  -- `c ≥ 1`, since some element has order one at `q'`
+  obtain ⟨u', hu'0, hu'1⟩ := exists_ord_eq_one hq'
+  have hcne : c ≠ 0 := by
+    intro h0
+    have h1 := hkey u' hu'0
+    rw [hu'1, h0, mul_zero] at h1
+    exact one_ne_zero h1
+  -- Step B: the two order filtrations agree
+  have hiff : ∀ x : ↑X.functionField, x ≠ 0 → (0 ≤ X.ord x q ↔ 0 ≤ X.ord x q') := by
+    intro x hx
+    rw [hkey x hx]
+    constructor
+    · intro h
+      exact mul_nonneg h hc0
+    · intro h
+      by_contra hm
+      push_neg at hm
+      have h1 : X.ord x q ≤ -1 := by omega
+      have h2 : (1 : ℤ) ≤ c := by omega
+      have h3 : X.ord x q * c ≤ (-1) * c :=
+        mul_le_mul_of_nonneg_right h1 hc0
+      linarith
+  -- the common valuation subring
+  set V : ValuationSubring ↑X.functionField :=
+    { toSubring := (algebraMap ↑(X.presheaf.stalk q) ↑X.functionField).range
+      mem_or_inv_mem' := fun x => by
+        rcases eq_or_ne x 0 with rfl | hx
+        · left
+          exact ⟨0, map_zero _⟩
+        rcases le_total 0 (X.ord x q) with h | h
+        · left
+          exact (mem_range_algebraMap_iff_ord_nonneg hq x).mpr fun _ => h
+        · right
+          refine (mem_range_algebraMap_iff_ord_nonneg hq x⁻¹).mpr fun _ => ?_
+          rw [ord_inv hx]
+          omega } with hV
+  -- the constants lie in `V`
+  have hVk : ∀ r : k, algebraMap k ↑X.functionField r ∈ V.toSubring := by
+    intro r
+    rcases eq_or_ne r 0 with rfl | hr
+    · rw [map_zero]
+      exact zero_mem _
+    · exact (mem_range_algebraMap_iff_ord_nonneg hq _).mpr fun _ => by
+        rw [ord_algebraMap_const k hr]
+  -- the valuative square (as in `exists_factor_stalk_of_universallyClosed`)
+  letI : Algebra k ↥V :=
+    (((algebraMap k ↑X.functionField).codRestrict V.toSubring hVk)).toAlgebra
+  set S : ValuativeCommSq (X ↘ Spec (CommRingCat.of k)) :=
+    { R := ↥V
+      K := ↑X.functionField
+      i₁ := X.fromSpecStalk (genericPoint X)
+      i₂ := Spec.map (CommRingCat.ofHom (algebraMap k ↥V))
+      commSq := by
+        constructor
+        have h1 : (X ↘ Spec (CommRingCat.of k)) =
+            X.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (globalSec (X := X)
+              (R := CommRingCat.of k))) := by
+          have h2 := Scheme.toSpecΓ_naturality (X ↘ Spec (CommRingCat.of k))
+          rw [← Category.comp_id (X ↘ Spec (CommRingCat.of k)),
+            ← toSpecΓ_SpecMap_ΓSpecIso_inv (CommRingCat.of k), ← Category.assoc, h2,
+            Category.assoc, ← Spec.map_comp]
+          rfl
+        rw [h1, Scheme.fromSpecStalk_toSpecΓ_assoc, ← Spec.map_comp, ← Spec.map_comp]
+        congr 1 } with hS
+  -- a lift centered at any point whose stalk has range `V`
+  have hcenter : ∀ (p : X),
+      (algebraMap ↑(X.presheaf.stalk p) ↑X.functionField).range = V.toSubring →
+      ∃ ls : S.commSq.LiftStruct, ls.l (IsLocalRing.closedPoint ↥V) = p := by
+    intro p hrange
+    have hinj : Function.Injective (algebraMap ↑(X.presheaf.stalk p) ↑X.functionField) :=
+      IsFractionRing.injective _ _
+    -- the induced isomorphism onto `V`
+    set ψ : ↑(X.presheaf.stalk p) →+* ↥V :=
+      (algebraMap ↑(X.presheaf.stalk p) ↑X.functionField).codRestrict V.toSubring
+        (fun y => by
+          rw [← hrange]
+          exact ⟨y, rfl⟩) with hψ
+    have hψsurj : Function.Surjective ψ := by
+      rintro ⟨v, hv⟩
+      obtain ⟨y, hy⟩ : v ∈ (algebraMap ↑(X.presheaf.stalk p) ↑X.functionField).range := by
+        rw [hrange]
+        exact hv
+      exact ⟨y, Subtype.ext hy⟩
+    have hψinj : Function.Injective ψ := fun a b hab =>
+      hinj (congrArg Subtype.val hab)
+    haveI : IsLocalHom ψ := by
+      constructor
+      intro a ha
+      obtain ⟨u, hu⟩ := ha
+      obtain ⟨v, hv⟩ := hψsurj ↑u⁻¹
+      refine IsUnit.of_mul_eq_one v ?_
+      apply hψinj
+      rw [map_mul, map_one, hv, ← hu]
+      exact Units.mul_inv _
+    -- the lift
+    have hfacl : Spec.map (CommRingCat.ofHom (algebraMap ↥V ↑X.functionField)) ≫
+        (Spec.map (CommRingCat.ofHom ψ) ≫ X.fromSpecStalk p)
+        = X.fromSpecStalk (genericPoint X) := by
+      rw [← Category.assoc, ← Spec.map_comp]
+      have hcomp : CommRingCat.ofHom ψ ≫
+          CommRingCat.ofHom (algebraMap ↥V ↑X.functionField)
+          = CommRingCat.ofHom (algebraMap ↑(X.presheaf.stalk p) ↑X.functionField) := by
+        rw [← CommRingCat.ofHom_comp]
+        rfl
+      rw [hcomp]
+      have halg : CommRingCat.ofHom
+          (algebraMap ↑(X.presheaf.stalk p) ↑X.functionField)
+          = X.presheaf.stalkSpecializes ((genericPoint_spec X).specializes trivial) := rfl
+      rw [halg, SpecMap_stalkSpecializes_fromSpecStalk]
+    have hfacr : (Spec.map (CommRingCat.ofHom ψ) ≫ X.fromSpecStalk p) ≫
+        (X ↘ Spec (CommRingCat.of k))
+        = Spec.map (CommRingCat.ofHom (algebraMap k ↥V)) := by
+      have h1 : (X ↘ Spec (CommRingCat.of k)) =
+          X.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (globalSec (X := X)
+            (R := CommRingCat.of k))) := by
+        have h2 := Scheme.toSpecΓ_naturality (X ↘ Spec (CommRingCat.of k))
+        rw [← Category.comp_id (X ↘ Spec (CommRingCat.of k)),
+          ← toSpecΓ_SpecMap_ΓSpecIso_inv (CommRingCat.of k), ← Category.assoc, h2,
+          Category.assoc, ← Spec.map_comp]
+        rfl
+      rw [h1, Category.assoc, Scheme.fromSpecStalk_toSpecΓ_assoc, ← Spec.map_comp,
+        ← Spec.map_comp]
+      congr 1
+      ext r
+      show algebraMap ↑(X.presheaf.stalk p) ↑X.functionField
+          (X.presheaf.germ ⊤ p trivial (globalSec (X := X) (R := CommRingCat.of k) r))
+          = algebraMap k ↑X.functionField r
+      exact (IsScalarTower.algebraMap_apply k ↑(X.presheaf.stalk p)
+        ↑X.functionField r).symm
+    refine ⟨⟨Spec.map (CommRingCat.ofHom ψ) ≫ X.fromSpecStalk p, hfacl, hfacr⟩, ?_⟩
+    show (Spec.map (CommRingCat.ofHom ψ) ≫ X.fromSpecStalk p)
+        (IsLocalRing.closedPoint ↥V) = p
+    rw [Scheme.Hom.comp_apply, Spec_closedPoint]
+    exact fromSpecStalk_closedPoint
+  -- ranges agree at both points
+  have hrq : (algebraMap ↑(X.presheaf.stalk q) ↑X.functionField).range = V.toSubring := rfl
+  have hrq' : (algebraMap ↑(X.presheaf.stalk q') ↑X.functionField).range
+      = V.toSubring := by
+    ext x
+    rw [← hrq]
+    rcases eq_or_ne x 0 with rfl | hx
+    · constructor <;> intro _ <;> exact ⟨0, map_zero _⟩
+    constructor
+    · intro hmem
+      have h1 := (mem_range_algebraMap_iff_ord_nonneg hq' x).mp hmem hx
+      exact (mem_range_algebraMap_iff_ord_nonneg hq x).mpr fun _ => (hiff x hx).mpr h1
+    · intro hmem
+      have h1 := (mem_range_algebraMap_iff_ord_nonneg hq x).mp hmem hx
+      exact (mem_range_algebraMap_iff_ord_nonneg hq' x).mpr fun _ => (hiff x hx).mp h1
+  -- two centers of the same square contradict separatedness
+  obtain ⟨ls, hls⟩ := hcenter q hrq
+  obtain ⟨ls', hls'⟩ := hcenter q' hrq'
+  haveI hsub := IsSeparated.valuativeCriterion (X ↘ Spec (CommRingCat.of k)) S
+  have heq : ls = ls' := Subsingleton.elim _ _
+  apply hne
+  rw [← hls, ← hls', heq]
+
+open IntermediateField in
+/-- **The degree identity for separated curves.** For `X` with a separated structure
+morphism, `deg (f)_∞ = [k(X) : k(f)]` for every transcendental rational function, with no
+residual witness hypotheses. -/
+theorem degree_polePart_eq_finrank_of_isSeparated [IsNoetherian X]
+    [IsSeparated (X ↘ Spec (CommRingCat.of k))]
+    (hκ : ∀ (q : X), coheight q = 1 → Module.Finite k ↑(X.residueField q))
+    (hL0 : Module.Finite k (LSubmodule X k (0 : AlgebraicCycle X ℤ)))
+    {f : ↑X.functionField} (hft : Transcendental k f) :
+    (polePart X f).degree k
+      = (Module.finrank ↥(adjoin k {f}) ↑X.functionField : ℤ) :=
+  degree_polePart_eq_finrank k hκ hL0 hft fun _ _ h1 h2 hne =>
+    exists_ord_witness_of_isSeparated k h1 h2 hne
+
+end Witnesses
+
 end AlgebraicGeometry.AlgebraicCycle.SheafViaSubmodule
