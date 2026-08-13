@@ -644,7 +644,7 @@ noncomputable def smulNatTrans (r : Γ(X, ⊤)) :
 underlying abelian sheaf of the `𝒪_X`-module `F`.
 
 This is the intrinsic action: no morphism to an affine scheme is involved. An action of a ring `R`
-on a scheme `X` over `Spec R` is obtained by composing with `Scheme.Hom.appTopOfSpec`. -/
+on a scheme `X` over `Spec R` is obtained by composing with `Scheme.specΓHomEquiv`. -/
 noncomputable def smulEnd :
     Γ(X, ⊤) →+* CategoryTheory.End ((SheafOfModules.toSheaf _).obj F) where
   toFun r := Sheaf.homEquiv.symm (smulNatTrans F r)
