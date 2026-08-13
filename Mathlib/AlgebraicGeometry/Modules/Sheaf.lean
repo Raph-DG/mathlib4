@@ -606,18 +606,15 @@ section GlobalAction
 
 variable (F : X.Modules)
 
-/-- The `Γ(X, ⊤)`-module structure on the sections of `F` over `U`, obtained by restricting
-global sections to `U`. -/
-noncomputable abbrev globalModule (U : X.Opens) : Module Γ(X, ⊤) Γ(F, U) :=
-  Module.compHom Γ(F, U) (globalRestrict U)
-
+/-- Global sections act on the sections of `F` over `U` by restriction. -/
 lemma smul_presheaf_map {U V : X.Opens} (i : U ⟶ V) (r : Γ(X, ⊤)) (x : Γ(F, V)) :
-    letI := globalModule F U
-    letI := globalModule F V
+    letI := Module.compHom Γ(F, U) (X.presheaf.map U.leTop.op).hom
+    letI := Module.compHom Γ(F, V) (X.presheaf.map V.leTop.op).hom
     F.presheaf.map i.op (r • x) = r • F.presheaf.map i.op x := by
-  change F.presheaf.map i.op (globalRestrict V r • x)
-    = globalRestrict U r • F.presheaf.map i.op x
-  rw [Scheme.Modules.map_smul, map_globalRestrict]
+  change F.presheaf.map i.op (X.presheaf.map V.leTop.op r • x)
+    = X.presheaf.map U.leTop.op r • F.presheaf.map i.op x
+  rw [Scheme.Modules.map_smul, ← ConcreteCategory.comp_apply, ← X.presheaf.map_comp]
+  congr 2
 
 /-- The underlying natural transformation of "multiplication by the global section `r`"
 on `G = toSheaf F`. -/
@@ -625,7 +622,7 @@ noncomputable def smulNatTrans (r : Γ(X, ⊤)) :
     ((SheafOfModules.toSheaf X.ringCatSheaf).obj F).obj ⟶
       ((SheafOfModules.toSheaf X.ringCatSheaf).obj F).obj where
   app U :=
-    letI := globalModule F U.unop
+    letI := Module.compHom Γ(F, U.unop) (X.presheaf.map U.unop.leTop.op).hom
     AddCommGrpCat.ofHom (DistribSMul.toAddMonoidHom (Γ(F, U.unop)) r)
   naturality U V g := by
     ext x
@@ -643,27 +640,27 @@ noncomputable def smulEnd :
   map_one' := by
     refine Sheaf.hom_ext <| NatTrans.ext (funext fun U => congrArg AddCommGrpCat.ofHom ?_)
     ext y
-    let := globalModule F U.unop
+    let := Module.compHom Γ(F, U.unop) (X.presheaf.map U.unop.leTop.op).hom
     exact one_smul Γ(X, ⊤) y
   map_mul' r s := by
     refine Sheaf.hom_ext <| NatTrans.ext (funext fun U => congrArg AddCommGrpCat.ofHom ?_)
     ext y
-    let := globalModule F U.unop
+    let := Module.compHom Γ(F, U.unop) (X.presheaf.map U.unop.leTop.op).hom
     exact mul_smul r s y
   map_zero' := by
     refine Sheaf.hom_ext <| NatTrans.ext (funext fun U => congrArg AddCommGrpCat.ofHom ?_)
     ext y
-    let := globalModule F U.unop
+    let := Module.compHom Γ(F, U.unop) (X.presheaf.map U.unop.leTop.op).hom
     exact zero_smul Γ(X, ⊤) y
   map_add' r s := by
     refine Sheaf.hom_ext <| NatTrans.ext (funext fun U => congrArg AddCommGrpCat.ofHom ?_)
     ext y
-    let := globalModule F U.unop
+    let := Module.compHom Γ(F, U.unop) (X.presheaf.map U.unop.leTop.op).hom
     exact add_smul r s y
 
 @[simp] lemma smulNatTrans_app_apply (r : Γ(X, ⊤)) (U : (TopologicalSpace.Opens X)ᵒᵖ)
     (x : Γ(F, U.unop)) :
-    ((smulNatTrans F r).app U).hom x = globalRestrict U.unop r • x := rfl
+    ((smulNatTrans F r).app U).hom x = X.presheaf.map U.unop.leTop.op r • x := rfl
 
 lemma smulEnd_eq_homEquiv_symm (r : Γ(X, ⊤)) :
     smulEnd F r = Sheaf.homEquiv.symm (smulNatTrans F r) := rfl
