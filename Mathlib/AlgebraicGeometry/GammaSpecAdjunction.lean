@@ -307,6 +307,7 @@ def identityToΓSpec : 𝟭 LocallyRingedSpace.{u} ⟶ Γ.rightOp ⋙ Spec.toLoc
 
 namespace ΓSpec
 
+set_option backward.isDefEq.respectTransparency.types false in
 theorem left_triangle (X : LocallyRingedSpace) :
     SpecΓIdentity.inv.app (Γ.obj (op X)) ≫ (identityToΓSpec.app X).c.app (op ⊤) = 𝟙 _ :=
   X.Γ_Spec_left_triangle
@@ -451,6 +452,7 @@ instance isIso_adjunction_counit : IsIso ΓSpec.adjunction.counit := by
 
 end ΓSpec
 
+set_option backward.isDefEq.respectTransparency.types false in
 theorem Scheme.toSpecΓ_apply (X : Scheme.{u}) (x) :
     Scheme.toSpecΓ X x = Spec.map (X.presheaf.Γgerm x) (IsLocalRing.closedPoint _) := rfl
 
@@ -501,41 +503,10 @@ lemma ΓSpecIso_inv_ΓSpec_adjunction_homEquiv {X : Scheme.{u}} {B : CommRingCat
   simp only [Adjunction.homEquiv_apply, Scheme.Spec_map, Opens.map_top, Scheme.Hom.comp_app]
   simp
 
+set_option backward.isDefEq.respectTransparency false in
 lemma ΓSpec_adjunction_homEquiv_eq {X : Scheme.{u}} {B : CommRingCat} (φ : B ⟶ Γ(X, ⊤)) :
     ((ΓSpec.adjunction.homEquiv X (op B)) φ.op).appTop = (Scheme.ΓSpecIso B).hom ≫ φ := by
   rw [← Iso.inv_comp_eq, ΓSpecIso_inv_ΓSpec_adjunction_homEquiv]
-
-set_option backward.isDefEq.respectTransparency false in
-/-- The morphism `X ⟶ Spec R` corresponding to a ring homomorphism `φ : R ⟶ Γ(X, ⊤)` under the
-Γ–Spec adjunction is `X.toSpecΓ ≫ Spec.map φ`. -/
-lemma ΓSpec_adjunction_homEquiv_op {X : Scheme.{u}} {R : CommRingCat.{u}} (φ : R ⟶ Γ(X, ⊤)) :
-    ΓSpec.adjunction.homEquiv X (op R) φ.op = X.toSpecΓ ≫ Spec.map φ := by
-  rw [Adjunction.homEquiv_apply]
-  rfl
-
-/-- The Γ–Spec adjunction as a bijection between morphisms of schemes `X ⟶ Spec R` and ring
-homomorphisms `R ⟶ Γ(X, ⊤)`. For `X` itself affine, compare `Spec.homEquiv`. -/
-noncomputable def _root_.AlgebraicGeometry.Scheme.specΓHomEquiv {X : Scheme.{u}}
-    {R : CommRingCat.{u}} : (X ⟶ Spec R) ≃ (R ⟶ Γ(X, ⊤)) :=
-  ((opEquiv (op Γ(X, ⊤)) (op R)).symm.trans (ΓSpec.adjunction.homEquiv X (op R))).symm
-
-set_option backward.isDefEq.respectTransparency false in
-@[simp]
-lemma _root_.AlgebraicGeometry.Scheme.specΓHomEquiv_apply {X : Scheme.{u}} {R : CommRingCat.{u}}
-    (f : X ⟶ Spec R) :
-    Scheme.specΓHomEquiv f = (Scheme.ΓSpecIso R).inv ≫ f.appTop := by
-  obtain ⟨ψ, rfl⟩ := (ΓSpec.adjunction.homEquiv X (op R)).surjective f
-  have h1 : Scheme.specΓHomEquiv ((ΓSpec.adjunction.homEquiv X (op R)) ψ) = ψ.unop :=
-    congrArg (opEquiv (op Γ(X, ⊤)) (op R))
-      (Equiv.symm_apply_apply (ΓSpec.adjunction.homEquiv X (op R)) ψ)
-  rw [h1]
-  exact (ΓSpecIso_inv_ΓSpec_adjunction_homEquiv ψ.unop).symm
-
-@[simp]
-lemma _root_.AlgebraicGeometry.Scheme.specΓHomEquiv_symm_apply {X : Scheme.{u}}
-    {R : CommRingCat.{u}} (φ : R ⟶ Γ(X, ⊤)) :
-    Scheme.specΓHomEquiv.symm φ = X.toSpecΓ ≫ Spec.map φ :=
-  ΓSpec_adjunction_homEquiv_op φ
 
 set_option backward.isDefEq.respectTransparency false in
 theorem ΓSpecIso_obj_hom {X : Scheme.{u}} (U : X.Opens) :
@@ -610,14 +581,6 @@ def Spec.homEquiv {R S : CommRingCat} : (Spec S ⟶ Spec R) ≃ (R ⟶ S) where
   invFun := Spec.map
   left_inv := Spec.map_preimage
   right_inv := Spec.preimage_map
-
-/-- For `X` affine, `Scheme.specΓHomEquiv` is `Spec.homEquiv` followed by the identification of
-`Γ(Spec S, ⊤)` with `S`. -/
-lemma Scheme.specΓHomEquiv_eq_homEquiv {R S : CommRingCat.{u}} (f : Spec S ⟶ Spec R) :
-    Scheme.specΓHomEquiv f = Spec.homEquiv f ≫ (Scheme.ΓSpecIso S).inv := by
-  conv_lhs => rw [← Spec.map_preimage f]
-  rw [Scheme.specΓHomEquiv_apply, ← Scheme.ΓSpecIso_inv_naturality]
-  rfl
 
 @[simp]
 lemma Spec.preimage_id {R : CommRingCat} : Spec.preimage (𝟙 (Spec R)) = 𝟙 R :=
