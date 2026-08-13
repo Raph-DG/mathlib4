@@ -433,6 +433,7 @@ public import Mathlib.Algebra.Group.PNatPowAssoc
 public import Mathlib.Algebra.Group.PUnit
 public import Mathlib.Algebra.Group.Pi.Basic
 public import Mathlib.Algebra.Group.Pi.Lemmas
+public import Mathlib.Algebra.Group.Pi.Torsion
 public import Mathlib.Algebra.Group.Pi.Units
 public import Mathlib.Algebra.Group.Pointwise.Finset.Basic
 public import Mathlib.Algebra.Group.Pointwise.Finset.BigOperators
@@ -965,6 +966,7 @@ public import Mathlib.Algebra.Order.Field.Pointwise
 public import Mathlib.Algebra.Order.Field.Power
 public import Mathlib.Algebra.Order.Field.Rat
 public import Mathlib.Algebra.Order.Field.Subfield
+public import Mathlib.Algebra.Order.Floor.BigOperators
 public import Mathlib.Algebra.Order.Floor.Defs
 public import Mathlib.Algebra.Order.Floor.Div
 public import Mathlib.Algebra.Order.Floor.Extended
@@ -1208,6 +1210,7 @@ public import Mathlib.Algebra.Prime.Defs
 public import Mathlib.Algebra.Prime.Lemmas
 public import Mathlib.Algebra.QuadraticAlgebra.Basic
 public import Mathlib.Algebra.QuadraticAlgebra.Defs
+public import Mathlib.Algebra.QuadraticAlgebra.Discr
 public import Mathlib.Algebra.QuadraticAlgebra.NormDeterminant
 public import Mathlib.Algebra.QuadraticDiscriminant
 public import Mathlib.Algebra.Quandle
@@ -1546,6 +1549,7 @@ public import Mathlib.AlgebraicTopology.Quasicategory.Nerve
 public import Mathlib.AlgebraicTopology.Quasicategory.StrictBicategory
 public import Mathlib.AlgebraicTopology.Quasicategory.StrictSegal
 public import Mathlib.AlgebraicTopology.Quasicategory.TwoTruncated
+public import Mathlib.AlgebraicTopology.Quasicategory.TwoTruncatedQuasicategory
 public import Mathlib.AlgebraicTopology.Reedy.Basic
 public import Mathlib.AlgebraicTopology.RelativeCellComplex.AttachCells
 public import Mathlib.AlgebraicTopology.RelativeCellComplex.Basic
@@ -2458,7 +2462,9 @@ public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
 public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Connected
 public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.FunctorCategory
 public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Indization
+public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.PresheafOfModules
 public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Sheaf
+public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.SheafOfModules
 public import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Types
 public import Mathlib.CategoryTheory.Abelian.GrothendieckCategory.Basic
 public import Mathlib.CategoryTheory.Abelian.GrothendieckCategory.ColimCoyoneda
@@ -2717,6 +2723,7 @@ public import Mathlib.CategoryTheory.Functor.Derived.LeftDerived
 public import Mathlib.CategoryTheory.Functor.Derived.PointwiseLeftDerived
 public import Mathlib.CategoryTheory.Functor.Derived.PointwiseRightDerived
 public import Mathlib.CategoryTheory.Functor.Derived.RightDerived
+public import Mathlib.CategoryTheory.Functor.Derived.RightDerivedCommShift
 public import Mathlib.CategoryTheory.Functor.EpiMono
 public import Mathlib.CategoryTheory.Functor.Flat
 public import Mathlib.CategoryTheory.Functor.FullyFaithful
@@ -2724,6 +2731,7 @@ public import Mathlib.CategoryTheory.Functor.FunctorHom
 public import Mathlib.CategoryTheory.Functor.Functorial
 public import Mathlib.CategoryTheory.Functor.Hom
 public import Mathlib.CategoryTheory.Functor.KanExtension.Adjunction
+public import Mathlib.CategoryTheory.Functor.KanExtension.AdjunctionPreserves
 public import Mathlib.CategoryTheory.Functor.KanExtension.Basic
 public import Mathlib.CategoryTheory.Functor.KanExtension.Dense
 public import Mathlib.CategoryTheory.Functor.KanExtension.DenseAt
@@ -2746,6 +2754,7 @@ public import Mathlib.CategoryTheory.Galois.Equivalence
 public import Mathlib.CategoryTheory.Galois.EssSurj
 public import Mathlib.CategoryTheory.Galois.Examples
 public import Mathlib.CategoryTheory.Galois.Full
+public import Mathlib.CategoryTheory.Galois.FullSubcategory
 public import Mathlib.CategoryTheory.Galois.GaloisObjects
 public import Mathlib.CategoryTheory.Galois.IsFundamentalgroup
 public import Mathlib.CategoryTheory.Galois.Prorepresentability
@@ -3290,6 +3299,7 @@ public import Mathlib.CategoryTheory.Presentable.Adjunction
 public import Mathlib.CategoryTheory.Presentable.Basic
 public import Mathlib.CategoryTheory.Presentable.CardinalDirectedPoset
 public import Mathlib.CategoryTheory.Presentable.CardinalFilteredPresentation
+public import Mathlib.CategoryTheory.Presentable.CardinalPure
 public import Mathlib.CategoryTheory.Presentable.ColimitPresentation
 public import Mathlib.CategoryTheory.Presentable.Dense
 public import Mathlib.CategoryTheory.Presentable.Directed
@@ -3299,6 +3309,7 @@ public import Mathlib.CategoryTheory.Presentable.IsCardinalFiltered
 public import Mathlib.CategoryTheory.Presentable.Limits
 public import Mathlib.CategoryTheory.Presentable.LocallyPresentable
 public import Mathlib.CategoryTheory.Presentable.OrthogonalReflection
+public import Mathlib.CategoryTheory.Presentable.PreservesCardinalPresentable
 public import Mathlib.CategoryTheory.Presentable.Presheaf
 public import Mathlib.CategoryTheory.Presentable.Retracts
 public import Mathlib.CategoryTheory.Presentable.SharplyLT.Basic
@@ -3871,7 +3882,9 @@ public import Mathlib.Data.ENat.Basic
 public import Mathlib.Data.ENat.BigOperators
 public import Mathlib.Data.ENat.Defs
 public import Mathlib.Data.ENat.Lattice
+public import Mathlib.Data.ENat.Monoid
 public import Mathlib.Data.ENat.Pow
+public import Mathlib.Data.ENat.SuccOrder
 public import Mathlib.Data.EReal.Basic
 public import Mathlib.Data.EReal.Inv
 public import Mathlib.Data.EReal.Operations
@@ -6114,6 +6127,7 @@ public import Mathlib.Order.Fin.Basic
 public import Mathlib.Order.Fin.Clamp
 public import Mathlib.Order.Fin.Finset
 public import Mathlib.Order.Fin.InsertNth
+public import Mathlib.Order.Fin.Prod
 public import Mathlib.Order.Fin.SuccAboveOrderIso
 public import Mathlib.Order.Fin.Tuple
 public import Mathlib.Order.FixedPoints
